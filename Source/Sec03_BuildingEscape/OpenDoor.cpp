@@ -16,24 +16,17 @@ UOpenDoor::UOpenDoor()
 
 	// ...
 }
-
-
 // Called when the game starts
 void UOpenDoor::BeginPlay()
 {
 	Super::BeginPlay();
 	Owner = GetOwner();	
-}
 
-void UOpenDoor::OpenDoor()
-{
-	Owner->SetActorRotation(FRotator(0.0f, OpenAngle, 0.0f));
+	if (!PressurePlate)
+	{
+		UE_LOG(LogTemp, Error, TEXT("ERROR: No Pressure Plate Component Found on %s."), *(GetOwner()->GetName()));
+	}
 }
-void UOpenDoor::CloseDoor()
-{
-	Owner->SetActorRotation(FRotator(0.0f, 0.0f, 0.0f));
-}
-
 
 // Called every frame
 void UOpenDoor::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -43,12 +36,11 @@ void UOpenDoor::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompon
 	// Poll Trigger Volume
 	if(GetTotalMassOfActorsOnPlate() > TriggerMass)
 	{
-		OpenDoor();
-		LastDoorOpenTime = GetWorld()->GetTimeSeconds();
+		OnOpen.Broadcast();
 	}
-	else if (((GetWorld()->GetTimeSeconds()) - LastDoorOpenTime) >= DoorCloseDelay)
+	else
 	{
-		CloseDoor();
+		OnClose.Broadcast();
 	}
 	// check if it is time to close the door
 }
@@ -57,6 +49,7 @@ float UOpenDoor::GetTotalMassOfActorsOnPlate()
 {
 	float TotalMass = 0.f;
 	TArray<AActor*> OverlappingActors;
+	if (!PressurePlate) { return TotalMass; }
 	PressurePlate->GetOverlappingActors(OUT OverlappingActors);
 
 	for (const auto* Actor : OverlappingActors)
